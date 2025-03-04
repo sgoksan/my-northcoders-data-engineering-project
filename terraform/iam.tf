@@ -51,6 +51,8 @@ resource "aws_iam_role" "load_lambda_role" {
 # ------------------------------
 */
 
+# Ingestion Lambda permissions
+
 # policy document for s3 bucket
 data "aws_iam_policy_document" "ingestion_s3_policy" {
   statement {
@@ -62,10 +64,10 @@ data "aws_iam_policy_document" "ingestion_s3_policy" {
                 "s3:Describe*",
                 "s3-object-lambda:Get*",
                 "s3-object-lambda:List*"]
-    resources = ["${aws_s3_bucket.ingestion_bucket.arn}"]
+    resources = ["${aws_s3_bucket.ingestion_bucket.arn}",
+                  "${aws_s3_bucket.ingestion_bucket.arn}/*"]
   }
 }
-
 
 
 # policy for s3 ingestion bucket
@@ -83,6 +85,76 @@ resource "aws_iam_policy_attachment" "lambda_s3_policy_attachment" {
   policy_arn = aws_iam_policy.s3_policy.arn
 }
 
+# Transform Lambda permissions
+
+# policy document for s3 bucket
+data "aws_iam_policy_document" "transform_s3_policy" {
+  statement {
+    sid = "1"
+
+    actions   = ["s3:PutObject", 
+                "s3:Get*",
+                "s3:List*",
+                "s3:Describe*",
+                "s3-object-lambda:Get*",
+                "s3-object-lambda:List*"]
+    resources = ["${aws_s3_bucket.ingestion_bucket.arn}",
+                  "${aws_s3_bucket.ingestion_bucket.arn}/*",
+                  "${aws_s3_bucket.processed_bucket.arn}",
+                  "${aws_s3_bucket.processed_bucket.arn}/*"]
+  }
+}
+
+
+# policy for s3 processed bucket
+resource "aws_iam_policy" "transform_s3_policy" {
+  name_prefix = "s3-policy-${var.transform_lambda}-write"
+
+  policy = data.aws_iam_policy_document.transform_s3_policy.json
+
+}
+
+# policy attachment to the role "iam_role_for_lambda"
+resource "aws_iam_policy_attachment" "lambda_transform_s3_policy_attachment" {
+  name       = "lambda-s3-policy-attachment"
+  roles      = [aws_iam_role.transform_lambda_role.name]
+  policy_arn = aws_iam_policy.transform_s3_policy.arn
+}
+
+# Load Lambda permissions
+
+# policy document for s3 bucket
+data "aws_iam_policy_document" "load_s3_policy" {
+  statement {
+    sid = "1"
+
+    actions   = ["s3:PutObject", 
+                "s3:Get*",
+                "s3:List*",
+                "s3:Describe*",
+                "s3-object-lambda:Get*",
+                "s3-object-lambda:List*"]
+    resources = [
+                  "${aws_s3_bucket.processed_bucket.arn}",
+                  "${aws_s3_bucket.processed_bucket.arn}/*"]
+  }
+}
+
+
+# policy for s3 processed bucket
+resource "aws_iam_policy" "load_s3_policy" {
+  name_prefix = "s3-policy-${var.load_lambda}-write"
+
+  policy = data.aws_iam_policy_document.load_s3_policy.json
+
+}
+
+# policy attachment to the role "iam_role_for_lambda"
+resource "aws_iam_policy_attachment" "lambda_load_s3_policy_attachment" {
+  name       = "lambda-s3-policy-attachment"
+  roles      = [aws_iam_role.load_lambda_role.name]
+  policy_arn = aws_iam_policy.load_s3_policy.arn
+}
 
 
 /*

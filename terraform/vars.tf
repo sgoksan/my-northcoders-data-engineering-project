@@ -50,3 +50,9 @@ variable "default_timeout" {
   default = 20
 }
 
+variable "processed_bucket_prefix" {
+  description = "Value of the Name tag for the processed_bucket_prefix"
+  type        = string
+  default     = "processed-zone"
+
+}
