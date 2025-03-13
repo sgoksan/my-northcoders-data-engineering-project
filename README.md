@@ -59,21 +59,30 @@ Terrific Totes is a fictional company that operates an OLTP database and a data 
    - Create test source and target databases from the provided ERDs.
    - Source DB: https://dbdiagram.io/d/SampleDB-6332fecf7b3d2034ffcaaa92
    - Target DB: https://dbdiagram.io/d/RevisedDW-63a19c5399cb1f3b55a27eca
-5. **Install Terraform** (if not already installed)
+5. **Store Credentials in GitHub secrets**
+   - Store AWS credentials, database credentials, and SNS email in GitHub secrets.
+6. **Install Terraform** (if not already installed)
    ```sh
    brew tap hashicorp/tap
    brew install hashicorp/tap/terraform
    ```
-6. **Set Up Terraform Backend**
+7. **Set Up Terraform Backend**
    - Create an S3 bucket to store Terraform state files.
-7. **Run Makefile Commands**
+8. **Run Makefile Commands**
    ```sh
    make all  # Creates virtual environment, installs dependencies, formats code, runs security and test coverage checks
    ```
-8. **Configure Sensitive Variables**
-   - Create a `sensitive.tfvars` file with database credentials and SNS email.
-   - Store AWS credentials, database credentials, and SNS email in GitHub secrets.
 9. **Deploy Infrastructure**
+   ```sh
+   cd terraform
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+   - During terraform apply, will be prompted to enter credentials in the terminal.
+10. **(Alternative Method) Configure Sensitive Variables**
+   - Create a `sensitive.tfvars` file with database credentials and SNS email.
+11. **(Alternative Method) Deploy Infrastructure (Using Variables)**
    ```sh
    cd terraform
    terraform init
