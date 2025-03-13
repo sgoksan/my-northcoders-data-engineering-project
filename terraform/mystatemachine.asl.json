@@ -7,7 +7,7 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Output": "{% $states.result.Payload %}",
       "Arguments": {
-        "FunctionName": "arn:aws:lambda:eu-west-2:699475937955:function:ingestion_lambda:$LATEST"
+        "FunctionName": "${LambdaFunctionIngest}:$LATEST"
       },
       "Retry": [
         {
@@ -30,7 +30,7 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Output": "{% $states.result.Payload %}",
       "Arguments": {
-        "FunctionName": "arn:aws:lambda:eu-west-2:699475937955:function:transform_lambda:$LATEST",
+        "FunctionName": "${LambdaFunctionTransform}:$LATEST",
         "Payload": "{% $states.input %}"
       },
       "Retry": [
@@ -54,7 +54,7 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Output": "{% $states.result.Payload %}",
       "Arguments": {
-        "FunctionName": "arn:aws:lambda:eu-west-2:699475937955:function:load_lambda:$LATEST",
+        "FunctionName": "${LambdaFunctionLoad}:$LATEST",
         "Payload": "{% $states.input %}"
       },
       "Retry": [
