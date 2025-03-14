@@ -51,21 +51,23 @@ resource "aws_iam_role" "load_lambda_role" {
 # ------------------------------
 */
 
+# Ingestion Lambda permissions
+
 # policy document for s3 bucket
 data "aws_iam_policy_document" "ingestion_s3_policy" {
   statement {
     sid = "1"
 
-    actions   = ["s3:PutObject", 
-                "s3:Get*",
-                "s3:List*",
-                "s3:Describe*",
-                "s3-object-lambda:Get*",
-                "s3-object-lambda:List*"]
-    resources = ["${aws_s3_bucket.ingestion_bucket.arn}"]
+    actions = ["s3:PutObject",
+      "s3:Get*",
+      "s3:List*",
+      "s3:Describe*",
+      "s3-object-lambda:Get*",
+    "s3-object-lambda:List*"]
+    resources = ["${aws_s3_bucket.ingestion_bucket.arn}",
+    "${aws_s3_bucket.ingestion_bucket.arn}/*"]
   }
 }
-
 
 
 # policy for s3 ingestion bucket
@@ -83,6 +85,76 @@ resource "aws_iam_policy_attachment" "lambda_s3_policy_attachment" {
   policy_arn = aws_iam_policy.s3_policy.arn
 }
 
+# Transform Lambda permissions
+
+# policy document for s3 bucket
+data "aws_iam_policy_document" "transform_s3_policy" {
+  statement {
+    sid = "1"
+
+    actions = ["s3:PutObject",
+      "s3:Get*",
+      "s3:List*",
+      "s3:Describe*",
+      "s3-object-lambda:Get*",
+    "s3-object-lambda:List*"]
+    resources = ["${aws_s3_bucket.ingestion_bucket.arn}",
+      "${aws_s3_bucket.ingestion_bucket.arn}/*",
+      "${aws_s3_bucket.processed_bucket.arn}",
+    "${aws_s3_bucket.processed_bucket.arn}/*"]
+  }
+}
+
+
+# policy for s3 processed bucket
+resource "aws_iam_policy" "transform_s3_policy" {
+  name_prefix = "s3-policy-${var.transform_lambda}-write"
+
+  policy = data.aws_iam_policy_document.transform_s3_policy.json
+
+}
+
+# policy attachment to the role "iam_role_for_lambda"
+resource "aws_iam_policy_attachment" "lambda_transform_s3_policy_attachment" {
+  name       = "lambda-s3-policy-attachment"
+  roles      = [aws_iam_role.transform_lambda_role.name]
+  policy_arn = aws_iam_policy.transform_s3_policy.arn
+}
+
+# Load Lambda permissions
+
+# policy document for s3 bucket
+data "aws_iam_policy_document" "load_s3_policy" {
+  statement {
+    sid = "1"
+
+    actions = ["s3:PutObject",
+      "s3:Get*",
+      "s3:List*",
+      "s3:Describe*",
+      "s3-object-lambda:Get*",
+    "s3-object-lambda:List*"]
+    resources = [
+      "${aws_s3_bucket.processed_bucket.arn}",
+    "${aws_s3_bucket.processed_bucket.arn}/*"]
+  }
+}
+
+
+# policy for s3 processed bucket
+resource "aws_iam_policy" "load_s3_policy" {
+  name_prefix = "s3-policy-${var.load_lambda}-write"
+
+  policy = data.aws_iam_policy_document.load_s3_policy.json
+
+}
+
+# policy attachment to the role "iam_role_for_lambda"
+resource "aws_iam_policy_attachment" "lambda_load_s3_policy_attachment" {
+  name       = "lambda-s3-policy-attachment"
+  roles      = [aws_iam_role.load_lambda_role.name]
+  policy_arn = aws_iam_policy.load_s3_policy.arn
+}
 
 
 /*
@@ -219,8 +291,8 @@ resource "aws_iam_role_policy_attachment" "load_lambda_cw_policy_attachment" {
 # ------------------------------
 */
 
-#ingestion lambda policy document for secret manager
-data "aws_iam_policy_document" "ingestion_lambda_secret_manager" {
+#lambda policy document for secret manager
+data "aws_iam_policy_document" "lambda_secret_manager" {
   statement {
     sid    = "BasePermissions"
     effect = "Allow"
@@ -250,14 +322,14 @@ data "aws_iam_policy_document" "ingestion_lambda_secret_manager" {
 resource "aws_iam_policy" "secret_manager_policy" {
   name_prefix = "secret_manager-policy-${var.ingestion_lambda}"
 
-  policy = data.aws_iam_policy_document.ingestion_lambda_secret_manager.json
+  policy = data.aws_iam_policy_document.lambda_secret_manager.json
 
 }
 
 # policy attachment to the role "iam_role_for_lambda"
 resource "aws_iam_policy_attachment" "lambda_secret_manager_policy_attachment" {
   name       = "lambda-secret-manager-attachment"
-  roles      = [aws_iam_role.ingestion_lambda_role.name]
+  roles      = [aws_iam_role.ingestion_lambda_role.name, aws_iam_role.load_lambda_role.name]
   policy_arn = aws_iam_policy.secret_manager_policy.arn
 }
 
@@ -332,9 +404,9 @@ data "aws_iam_policy_document" "trust_policy_event_bridge" {
     effect = "Allow"
 
     principals {
-      type        = "Service"
+      type = "Service"
       identifiers = ["states.amazonaws.com",
-                    "scheduler.amazonaws.com"]
+      "scheduler.amazonaws.com"]
     }
 
     actions = [
@@ -360,11 +432,61 @@ data "aws_iam_policy_document" "eventbridge_document_execution" {
 
 resource "aws_iam_policy" "eventbridge_policy_state_machine_execution" {
   name_prefix = "state-machine-execution-eventbridge-"
-  policy      = data.aws_iam_policy_document.eventbridge_document_execution.json 
+  policy      = data.aws_iam_policy_document.eventbridge_document_execution.json
 }
 
 
 resource "aws_iam_role_policy_attachment" "eventbridge_policy_attachment" {
   role       = aws_iam_role.event_bridge_role.name
   policy_arn = aws_iam_policy.eventbridge_policy_state_machine_execution.arn
+}
+
+
+
+/*
+# ------------------------------
+# LOAD Lambda IAM Policy for Secret Manager
+# ------------------------------
+*/
+
+#load lambda policy document for secret manager
+data "aws_iam_policy_document" "load_lambda_secret_manager" {
+  statement {
+    sid    = "BasePermissions"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:*",
+      "lambda:List*",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "LambdaPermissions"
+    effect = "Allow"
+    actions = [
+      "lambda:AddPermission",
+      "lambda:CreateFunction",
+      "lambda:GetFunction",
+      "lambda:InvokeFunction",
+      "lambda:UpdateFunctionConfiguration"
+    ]
+    resources = ["arn:aws:lambda:*:*:function:SecretsManager*"]
+  }
+}
+
+
+# policy for secret manager
+resource "aws_iam_policy" "load_lambda_secret_manager_policy" {
+  name_prefix = "secret_manager-policy-${var.load_lambda}"
+
+  policy = data.aws_iam_policy_document.load_lambda_secret_manager.json
+
+}
+
+# policy attachment to the role "iam_role_for_lambda"
+resource "aws_iam_policy_attachment" "load_lambda_secret_manager_policy_attachment" {
+  name       = "load-lambda-secret-manager-attachment"
+  roles      = [aws_iam_role.load_lambda_role.name]
+  policy_arn = aws_iam_policy.load_lambda_secret_manager_policy.arn
 }

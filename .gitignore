@@ -9,12 +9,13 @@ temp/
 **/*.pyc
 **/.vscode
 **/*_cache
-**/*pycache
+**/*pycache*
 *coverage*
 venv/
 **.tfstate*
 .pytest*
 .env
-terraform/.terraform**/** 
-
-
+terraform/.terraform**/**
+packages/
+layer/python/
+**/terraform/*.tfvars

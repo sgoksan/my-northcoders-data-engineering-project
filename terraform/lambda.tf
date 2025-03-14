@@ -36,10 +36,10 @@ resource "aws_s3_object" "lambda_code" {
 #This creates the lambda layer zip file, the s3 object from the zip file and creates the lambda layer resource block
 resource "null_resource" "pip_install" {
   triggers = {
-    shell_hash = "${sha256(file("${path.module}/../requirements.txt"))}"
+    shell_hash = "${sha256(file("${path.module}/../layer/requirements.txt"))}"
   }
   provisioner "local-exec" {
-    command = "python3 -m pip install -r ../requirements.txt -t ${path.module}/../layer/python"
+    command = "python3 -m pip install -r ../layer/requirements.txt -t ${path.module}/../layer/python"
   }
 }
 data "archive_file" "layer" {
@@ -60,6 +60,7 @@ resource "aws_lambda_layer_version" "lambda_layer" {
   s3_bucket           = aws_s3_bucket.code_bucket.id
   s3_key              = aws_s3_object.layer_code.key
 }
+
 
 # creates the 3 lambda resources
 
@@ -90,8 +91,14 @@ resource "aws_lambda_function" "transform_lambda" {
   handler          = "${var.transform_lambda}.lambda_handler"
   runtime          = var.python_runtime
   timeout          = var.default_timeout
-  layers           = [aws_lambda_layer_version.lambda_layer.arn]
+  layers           = [aws_lambda_layer_version.lambda_layer.arn, "arn:aws:lambda:eu-west-2:336392948345:layer:AWSSDKPandas-Python312:16"]
   depends_on       = [aws_s3_object.lambda_code, aws_s3_object.layer_code]
+  environment {
+    variables = {
+      S3_BUCKET_NAME_INGESTION = aws_s3_bucket.ingestion_bucket.id,
+      S3_BUCKET_NAME_PROCESSED = aws_s3_bucket.processed_bucket.id
+    }
+  }
 }
 
 resource "aws_lambda_function" "load_lambda" {
@@ -103,6 +110,11 @@ resource "aws_lambda_function" "load_lambda" {
   handler          = "${var.load_lambda}.lambda_handler"
   runtime          = var.python_runtime
   timeout          = var.default_timeout
-  layers           = [aws_lambda_layer_version.lambda_layer.arn]
+  layers           = [aws_lambda_layer_version.lambda_layer.arn, "arn:aws:lambda:eu-west-2:336392948345:layer:AWSSDKPandas-Python312:16"]
   depends_on       = [aws_s3_object.lambda_code, aws_s3_object.layer_code]
+  environment {
+    variables = {
+      S3_BUCKET_NAME_PROCESSED = aws_s3_bucket.processed_bucket.id
+    }
+  }
 }

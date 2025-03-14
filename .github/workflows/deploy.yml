@@ -42,14 +42,27 @@ jobs:
       - name: Terraform init 
         working-directory: terraform
         run: terraform init
+      # setup terraform variables
+      - name: Setup Terraform variables
+        run: |
+          echo "TF_VAR_email_address=${{ secrets.EMAIL_SUBSCRIBED_TO_SNS }}" >> $GITHUB_ENV
+          echo "TF_VAR_a_totesys_username=${{ secrets.A_TOTESYS_USERNAME }}" >> $GITHUB_ENV
+          echo "TF_VAR_b_totesys_password=${{ secrets.B_TOTESYS_PASSWORD }}" >> $GITHUB_ENV
+          echo "TF_VAR_c_totesys_host=${{ secrets.C_TOTESYS_HOST }}" >> $GITHUB_ENV
+          echo "TF_VAR_d_totesys_database=${{ secrets.D_TOTESYS_DATABASE }}" >> $GITHUB_ENV
+          echo "TF_VAR_e_final_dw_username=${{ secrets.E_FINALDW_USERNAME }}" >> $GITHUB_ENV
+          echo "TF_VAR_f_final_dw_password=${{ secrets.F_FINALDW_PASSWORD }}" >> $GITHUB_ENV
+          echo "TF_VAR_g_final_dw_host=${{ secrets.G_FINALDW_HOST }}" >> $GITHUB_ENV
+          echo "TF_VAR_h_final_dw_database=${{ secrets.H_FINALDW_DATABASE }}" >> $GITHUB_ENV
       # terraform plan
       - name: Terraform plan 
         working-directory: terraform
-        run: terraform plan
+        run: terraform plan 
       # terraform fmt
       - name: Terraform format
         working-directory: terraform
         run: terraform fmt
+      # terraform apply
       - name: Terraform apply
         working-directory: terraform 
         run: terraform apply -auto-approve
